@@ -60,34 +60,7 @@ function useTodosStatus() {
     return id;
   };
 
-  const removeTodo = (id) => {
-    const newTodos = todos.filter((todo) => todo.id != id);
-    setTodos(newTodos);
-  };
-
-  // modify v1
-  const modifyTodo = (id, content) => {
-    const newTodos = todos.map((todo) => (todo.id != id ? todo : { ...todo, content }));
-    setTodos(newTodos);
-  };
-
-  // modify v2
-  const modifyTodoByIndex = (index, newContent) => {
-    const newTodos = todos.map((todo, _index) =>
-      _index != index ? todo : { ...todo, content: newContent },
-    );
-    setTodos(newTodos);
-  };
-  // modify v2
-  const modifyTodoById = (id, newContent) => {
-    const index = findTodoIndexById(id);
-
-    if (index == -1) {
-      return null;
-    }
-
-    modifyTodoByIndex(index, newContent);
-  };
+ 
 
   const findTodoIndexById = (id) => {
     return todos.findIndex((todo) => todo.id == id);
@@ -106,10 +79,7 @@ function useTodosStatus() {
   return {
     todos,
     addTodo,
-    removeTodo,
-    modifyTodo,
-    findTodoById,
-    modifyTodoById,
+    findTodoById
   };
 }
 
@@ -154,7 +124,16 @@ const NewTodoForm = ({ noticeSnackbarStatus }) => {
   );
 };
 
+
+
 const TodoListItem = ({ todo, index, openDrawer }) => {
+  
+  const [isClicked, setIsClicked] = React.useState(false);
+
+  const handleClick = () => {
+    setIsClicked(!isClicked); // 클릭할 때마다 상태를 토글합니다.
+  };
+
   return (
     <>
       <li key={todo.id}>
@@ -170,28 +149,22 @@ const TodoListItem = ({ todo, index, openDrawer }) => {
           </div>
           <div className="tw-rounded-[10px] tw-shadow tw-flex tw-text-[14px] tw-min-h-[80px]">
             <Button className="tw-flex-shrink-0 tw-rounded-[10px_0_0_10px]" color="inherit">
-              <FaCheck
-                className={classNames(
-                  'tw-text-3xl',
-                  {
-                    'tw-text-[--mui-color-primary-main]': index % 2 == 0,
-                  },
-                  { 'tw-text-[#dcdcdc]': index % 2 != 0 },
-                )}
-              />
+            <FaCheck
+      className={classNames(
+        'tw-text-3xl',
+        {
+          'tw-text-[--mui-color-primary-main]': isClicked,
+        },
+        { 'tw-text-[#dcdcdc]': !isClicked },
+      )}
+      onClick={handleClick} // 클릭 이벤트를 처리할 함수를 전달합니다.
+    />
             </Button>
             <div className="tw-bg-[#dcdcdc] tw-w-[2px] tw-h-[60px] tw-self-center"></div>
             <div className="tw-bg-blue-300 tw-flex tw-items-center tw-p-3 tw-flex-grow hover:tw-text-[--mui-color-primary-main] tw-whitespace-pre-wrap tw-leading-relaxed tw-break-words">
               {todo.content}
             </div>
-            <Button
-              onClick={() => {
-                openDrawer(todo.id);
-              }}
-              className="tw-flex-shrink-0 tw-rounded-[0_10px_10px_0]"
-              color="inherit">
-              <FaEllipsisH className="tw-text-[#dcdcdc] tw-text-2xl" />
-            </Button>
+         
           </div>
         </div>
       </li>
@@ -199,158 +172,15 @@ const TodoListItem = ({ todo, index, openDrawer }) => {
   );
 };
 
-// 해당 todo option에 대한 drawer 열기, 닫기
-function useTodoOptionDrawerStatus() {
-  const [todoId, setTodoId] = React.useState(null);
 
-  const opened = React.useMemo(() => todoId !== null, [todoId]);
-
-  const open = (id) => setTodoId(id);
-  const close = () => setTodoId(null);
-
-  return {
-    todoId,
-    open,
-    close,
-    opened,
-  };
-}
-
-// modal 열기, 닫기
-function useEditTodoModalStatus() {
-  const [opened, setOpened] = React.useState(false);
-
-  const open = () => {
-    setOpened(true);
-  };
-
-  const close = () => {
-    setOpened(false);
-  };
-
-  return {
-    opened,
-    open,
-    close,
-  };
-}
-
-function EditTodoModal({ status, todo, noticeSnackbarStatus }) {
-  const todosStatus = useTodosStatus();
-  const onSubmit = (e) => {
-    e.preventDefault();
-
-    const form = e.currentTarget;
-
-    form.content.value = form.content.value.trim();
-
-    if (form.content.value.length == 0) {
-      alert('할 일 써');
-      form.content.focus();
-      return;
-    }
-
-    // modify v1
-    todosStatus.modifyTodo(todo.id, form.content.value);
-    status.close();
-
-    noticeSnackbarStatus.open(`${todo.id}번 todo 수정됨`);
-
-    // modify v2
-    // todosStatus.modifyTodoById(todo.id, form.content.value);
-  };
-
-  return (
-    <>
-      <Modal
-        open={status.opened}
-        onClose={status.close}
-        className="tw-flex tw-justify-center tw-items-center">
-        <div className="tw-bg-white tw-p-10 tw-rounded-[20px] tw-w-full tw-max-w-lg">
-          <form onSubmit={onSubmit} className="tw-flex tw-flex-col tw-gap-2">
-            <TextField
-              minRows={3}
-              maxRows={10}
-              multiline
-              name="content"
-              autoComplete="off"
-              variant="outlined"
-              label="할 일 써"
-              defaultValue={todo?.content}
-            />
-            <Button variant="contained" className="tw-font-bold" type="submit">
-              수정
-            </Button>
-          </form>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-function TodoOptionDrawer({ status, noticeSnackbarStatus }) {
-  const todosStatus = useTodosStatus();
-  const removeTodo = () => {
-    if (confirm(`${status.todoId}번 할 일을 삭제하시겠습니까?`) == false) {
-      status.close();
-      return;
-    }
-
-    todosStatus.removeTodo(status.todoId);
-    status.close();
-    noticeSnackbarStatus.open(`${status.todoId}번 todo 삭제됨`, 'error');
-  };
-
-  const editTodoModalStatus = useEditTodoModalStatus();
-
-  const todo = todosStatus.findTodoById(status.todoId);
-
-  return (
-    <>
-      <EditTodoModal
-        status={editTodoModalStatus}
-        todo={todo}
-        noticeSnackbarStatus={noticeSnackbarStatus}
-      />
-      <SwipeableDrawer
-        anchor="bottom"
-        open={status.opened}
-        onClose={status.close}
-        onOpen={() => {}}>
-        <List>
-          <ListItem className="tw-flex tw-gap-2 tw-p-[15px]">
-            <span className="tw-text-[--mui-color-primary-main]">{status.todoId}번 </span>
-            <span>Your Todo</span>
-          </ListItem>
-          <Divider className="tw-my-[5px]" />
-          <ListItemButton
-            onClick={editTodoModalStatus.open}
-            className="tw-p-[15px_20px] tw-flex tw-gap-2 tw-items-center">
-            <span>수정</span>
-            <FaPenToSquare className="block tw-mt-[-5px]" />
-          </ListItemButton>
-          <ListItemButton
-            className="tw-p-[15px_20px] tw-flex tw-gap-2 tw-items-center"
-            onClick={removeTodo}>
-            <span>삭제</span>
-            <FaTrash className="block tw-mt-[-5px]" />
-          </ListItemButton>
-        </List>
-      </SwipeableDrawer>
-    </>
-  );
-}
 
 const TodoList = ({ noticeSnackbarStatus }) => {
   const todosStatus = useTodosStatus();
-  const todoOptionDrawerStatus = useTodoOptionDrawerStatus();
+
 
   return (
     <>
-      <TodoOptionDrawer
-        status={todoOptionDrawerStatus}
-        noticeSnackbarStatus={noticeSnackbarStatus}
-      />
+      
       <nav>
         할 일 갯수 : {todosStatus.todos.length}
         <ul>
@@ -359,7 +189,6 @@ const TodoList = ({ noticeSnackbarStatus }) => {
               key={todo.id}
               todo={todo}
               index={index}
-              openDrawer={todoOptionDrawerStatus.open}
             />
           ))}
         </ul>
@@ -417,26 +246,15 @@ function App() {
   const todosStatus = useTodosStatus();
   const noticeSnackbarStatus = useNoticeSnackbarStatus();
 
-  React.useEffect(() => {
-    todosStatus.addTodo('스쿼트\n런지');
-    todosStatus.addTodo('벤치');
-    todosStatus.addTodo('데드');
-  }, []);
 
   return (
     <>
       <AppBar position="fixed">
-        <Toolbar>
-          <div className="tw-flex-1">
-            <FaBars onClick={() => setOpen(true)} className="tw-cursor-pointer" />
-          </div>
-          <div className="logo-box">
+        <Toolbar className="tw-flex tw-justify-center">
+             <div className="logo-box tw-flex tw-justify-center">
             <a href="/" className="tw-font-bold">
               TODO!
             </a>
-          </div>
-          <div className="tw-flex-1 tw-flex tw-justify-end">
-            <a href="/write">글쓰기</a>
           </div>
         </Toolbar>
       </AppBar>
